@@ -1,0 +1,4 @@
+shapely
+concave_hull
+scikit-learn
+alphashape

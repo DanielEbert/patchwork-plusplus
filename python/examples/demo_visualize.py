@@ -77,26 +77,39 @@ if __name__ == "__main__":
             from shapely.geometry import Polygon, MultiPolygon
             from concave_hull import concave_hull, concave_hull_indexes
             import alphashape
+            from simplification.cutil import (
+                simplify_coords,
+                simplify_coords_idx,
+                simplify_coords_vw,
+                simplify_coords_vw_idx,
+                simplify_coords_vwp,
+            )
 
             nonground_xy = nonground[:, :2]
             dbscan = DBSCAN(eps=0.3, min_samples=3)
-            clusters = dbscan.fit_predict(nonground_xy)
+            cluster_labels = dbscan.fit_predict(nonground_xy)
 
             polygons = []
 
-            for cluster_id in set(clusters):
+            for cluster_id in set(cluster_labels):
                 if cluster_id == -1:  # Skip noise points
                     continue
                 
-                cluster_points = nonground_xy[clusters == cluster_id]
+                cluster_points = nonground_xy[cluster_labels == cluster_id]
                 if len(cluster_points) >= 3:  # Convex hull requires at least 3 points
                     idxes = concave_hull_indexes(
                         cluster_points,
                         concavity=2  # TODO: check
                     )
-                    hull = ConvexHull(cluster_points)
-                    hull_points = cluster_points[hull.vertices]
-                    polygon = Polygon(cluster_points[idxes])
+                    # breakpoint()
+                    coords = cluster_points[idxes]
+                    simplified_coords = simplify_coords(coords, 0.1)
+                    
+                    if len(simplified_coords) < 4:
+                        simplified_coords = coords
+
+                    polygon = Polygon(simplified_coords)
+                    # polygon = Polygon(coords)
                     polygons.append(polygon)
 
                     # concave_hull = alphashape.alphashape(cluster_points, alpha=0.2) 
