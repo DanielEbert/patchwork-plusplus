@@ -69,75 +69,72 @@ if __name__ == "__main__":
 
     PLOT_HULL = True
 
-    if PLOT_HULL:
+    if True:
+        if PLOT_HULL:
+            import numpy as np
+            from sklearn.cluster import DBSCAN
+            from scipy.spatial import ConvexHull
+            from shapely.geometry import Polygon, MultiPolygon
+            from concave_hull import concave_hull, concave_hull_indexes
+            import alphashape
+
+            nonground_xy = nonground[:, :2]
+            dbscan = DBSCAN(eps=0.3, min_samples=3)
+            clusters = dbscan.fit_predict(nonground_xy)
+
+            polygons = []
+
+            for cluster_id in set(clusters):
+                if cluster_id == -1:  # Skip noise points
+                    continue
+                
+                cluster_points = nonground_xy[clusters == cluster_id]
+                if len(cluster_points) >= 3:  # Convex hull requires at least 3 points
+                    idxes = concave_hull_indexes(
+                        cluster_points,
+                        concavity=2  # TODO: check
+                    )
+                    hull = ConvexHull(cluster_points)
+                    hull_points = cluster_points[hull.vertices]
+                    polygon = Polygon(cluster_points[idxes])
+                    polygons.append(polygon)
+
+                    # concave_hull = alphashape.alphashape(cluster_points, alpha=0.2) 
+
+                    # if isinstance(concave_hull, Polygon):
+                    #     polygons.append(concave_hull)
+                    # elif isinstance(concave_hull, MultiPolygon):
+                    #     polygons.extend([poly for poly in concave_hull.geoms])
+
+
+
         import numpy as np
-        from sklearn.cluster import DBSCAN
-        from scipy.spatial import ConvexHull
-        from shapely.geometry import Polygon, MultiPolygon
-        from concave_hull import concave_hull, concave_hull_indexes
-        import alphashape
+        import tkinter
+        import matplotlib.pyplot as plt
 
-        nonground_xy = nonground[:, :2]
-        dbscan = DBSCAN(eps=2, min_samples=3)
-        clusters = dbscan.fit_predict(nonground_xy)
+        plt.figure(figsize=(14, 14))
+        plt.xlim(-80, 80)
+        plt.ylim(-80, 80)
 
-        polygons = []
+        if PLOT_HULL:
+            # plt.scatter(nonground_xy[:, 0], nonground_xy[:, 1], c=clusters, cmap='tab10', marker='o', label="Points")
 
-        for cluster_id in set(clusters):
-            if cluster_id == -1:  # Skip noise points
-                continue
-            
-            cluster_points = nonground_xy[clusters == cluster_id]
-            if len(cluster_points) >= 3:  # Convex hull requires at least 3 points
-                # idxes = concave_hull_indexes(
-                #     cluster_points,
-                #     concavity=2  # TODO: check
-                # )
-                # hull = ConvexHull(cluster_points)
-                # hull_points = cluster_points[hull.vertices]
-                # polygon = Polygon(cluster_points[idxes])
-                # polygons.append(polygon)
-
-                concave_hull = alphashape.alphashape(cluster_points, alpha=0.2) 
-
-                if isinstance(concave_hull, Polygon):
-                    polygons.append(concave_hull)
-                elif isinstance(concave_hull, MultiPolygon):
-                    polygons.extend([poly for poly in concave_hull.geoms])
+            for polygon in polygons:
+                x, y = polygon.exterior.xy
+                plt.fill(x, y, alpha=0.3, edgecolor='black', facecolor='cyan', label="Polygon")
+        else:
+            plt.scatter(nonground[:, 0], nonground[:, 1], color='red', label='nonground', s=1)
+            plt.scatter(ground[:, 0], ground[:, 1], color='blue', label='ground', s=1)
 
 
+        plt.xlabel('x')
+        plt.ylabel('y')
+        plt.title('Ground/Noground')
 
-    import numpy as np
-    import tkinter
-    import matplotlib.pyplot as plt
+        plt.show()
 
-    plt.figure(figsize=(14, 14))
-
-    if PLOT_HULL:
-        plt.scatter(nonground_xy[:, 0], nonground_xy[:, 1], c=clusters, cmap='tab10', marker='o', label="Points")
-
-        for polygon in polygons:
-            x, y = polygon.exterior.xy
-            plt.fill(x, y, alpha=0.3, edgecolor='black', facecolor='cyan', label="Polygon")
-    else:
-        plt.scatter(nonground[:, 0], nonground[:, 1], color='red', label='nonground', s=1)
-        plt.scatter(ground[:, 0], ground[:, 1], color='blue', label='ground', s=1)
-
-
-    plt.xlabel('x')
-    plt.ylabel('y')
-    plt.title('Ground/Noground')
-
-    plt.show()
-
-
-
-
-
-
-
-    exit(1) # TODO
-    # breakpoint()
+        exit(1)
+        # breakpoint()
 
     centers_o3d = o3d.geometry.PointCloud()
     centers_o3d.points = o3d.utility.Vector3dVector(centers)
